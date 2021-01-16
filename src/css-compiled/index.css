@@ -1,0 +1,57 @@
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen", "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+code {
+  font-family: source-code-pro, Menlo, Monaco, Consolas, "Courier New", monospace;
+}
+
+.sudoku {
+  width: 500px;
+  height: 500px;
+  margin: 50px auto;
+  display: flex;
+  flex-wrap: wrap;
+  align-content: flex-end;
+}
+.sudoku:focus {
+  outline: none;
+}
+
+.matrix {
+  min-width: 33.33%;
+  min-height: 33.33%;
+  display: flex;
+  flex-wrap: wrap;
+  margin: 0 -2px -2px 0;
+  box-sizing: border-box;
+  border: 2px solid #212121;
+}
+
+.box {
+  min-width: 33.33%;
+  min-height: 33.33%;
+  box-sizing: border-box;
+  border: 1px solid #efefef;
+  text-align: center;
+  font-size: 18px;
+  vertical-align: middle;
+}
+.box:before {
+  content: "";
+  display: inline-block;
+  height: 100%;
+  vertical-align: middle;
+  font-size: 0;
+}
+.box.editable {
+  color: #588ed8;
+}
+.box.selected {
+  background: rgba(88, 142, 216, 0.1);
+}
+
+/*# sourceMappingURL=index.css.map */

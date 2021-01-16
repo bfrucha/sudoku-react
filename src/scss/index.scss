@@ -1,0 +1,68 @@
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+code {
+  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
+    monospace;
+}
+
+
+$black: #212121;
+$grey: #efefef;
+$editable: #588ed8;
+$selected: change-color($editable, $alpha: 0.1);
+
+.sudoku {
+  width: 500px;
+  height: 500px;
+  margin: 50px auto;
+  display: flex;
+  flex-wrap: wrap;
+  align-content: flex-end;
+
+  &:focus {
+    outline: none;
+  }
+}
+
+.matrix {
+  min-width: 33.33%;
+  min-height: 33.33%;
+  display: flex;
+  flex-wrap: wrap;
+  margin: 0 -2px -2px 0;
+  box-sizing: border-box;
+  border: 2px solid $black;
+}
+
+.box {
+  min-width: 33.33%;
+  min-height: 33.33%;
+  box-sizing: border-box;
+  border: 1px solid $grey;
+  text-align: center;
+  font-size: 18px;
+  vertical-align: middle;
+
+  &:before {
+    content: "";
+    display: inline-block;
+    height: 100%;
+    vertical-align: middle;
+    font-size: 0;
+  }
+
+  &.editable {
+    color: $editable;
+  }
+
+  &.selected {
+    background: $selected;
+  }
+}
