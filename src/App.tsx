@@ -1,133 +1,35 @@
-// import logo from './logo.svg';
-import _ from 'lodash';
-import './App.css';
-import React, { useEffect, useState } from 'react';
+import _ from 'lodash'
+import React, { useEffect, useState } from 'react'
+import { checkNumberCell, solveMatrix, isMatrixValid } from './sudoku_logic'
+import { Coordinate, shuffle, randomStart, compareCoordinates } from './utils'
 
-/* UTILS */
-
-/**
- * Shuffles array in place.
- * @param {Array} a items An array containing the items.
- */
-function shuffle(a) {
-  var j, x, i;
-  for (i = a.length - 1; i > 0; i--) {
-    j = Math.floor(Math.random() * (i + 1));
-    x = a[i];
-    a[i] = a[j];
-    a[j] = x;
-  }
-  return a;
+// type of the sudoku grid cell
+enum CellType {
+  FIXED= 'fixed',
+  EDITABLE= 'editable',
+  VALID= 'valid',
+  INVALID= 'invalid'
 }
 
-
-function hardcodedStart() {
-  return [
-    [5,3,0,0,7,0,0,0,0],
-    [6,0,0,1,9,5,0,0,0],
-    [0,9,8,0,0,0,0,6,0],
-    [8,0,0,0,6,0,0,0,3],
-    [4,0,0,8,0,3,0,0,1],
-    [7,0,0,0,2,0,0,0,6],
-    [0,6,0,0,0,0,2,8,0],
-    [0,0,0,4,1,9,0,0,5],
-    [0,0,0,0,8,0,0,7,9]
-  ];
+// game difficulty, numerical values are used to remove cells from initial matrix
+enum Difficulty {
+  EASY= 5,
+  MEDIUM= 6,
+  HARD= 7
 }
 
-function randomStart() {
-  const gameMatrix = new Array(9).fill(null).map((el, i) => new Array(9).fill(0));
-  const numbers = new Array(9).fill(null).map((el, i) => i+1);
+interface SelectCell { (coord: Coordinate): void }
 
-  for(let skip = 0; skip < 3; skip++) {
-    const tmp = shuffle([...numbers]);
-    // console.log(tmp);
-    for(let c = 0; c < 3; c++) {
-      for(let r = 0; r < 3; r++) {
-        gameMatrix[c+skip*3][r+skip*3] = tmp[c*3+r];
-      }
-    }
-  }
-
-  return gameMatrix;
+interface CellProps {
+  type: CellType,
+  selected: boolean,
+  number: number,
+  coordinates: Coordinate,
+  selectCell: SelectCell
 }
 
-function OKCol(matrix, col, nb) {
-  for(let r = 0; r < 9; r++) if(matrix[col][r] === nb) return false;
-  return true;
-};
-
-function OKRow(matrix, row, nb) {
-  for(let c = 0; c < 9; c++) if(matrix[c][row] === nb) return false;
-  return true;
-};
-
-function OKMatrix(matrix, col, row, nb) {
-  const startCol = Math.floor(col / 3) * 3, startRow = Math.floor(row / 3) * 3;
-  for (let c = 0; c < 3; c++)
-    for (let r = 0; r < 3; r++)
-      if(nb === matrix[c + startCol][r + startRow]) return false;
-  return true;
-}
-
-function checkNumberCell(matrix, col, row, nb) {
-  return OKRow(matrix, row, nb) && OKCol(matrix, col, nb) && OKMatrix(matrix, col, row, nb);
-}
-
-function solveMatrix(matrix) {
-  let rem = 0;
-  for(let column = 0; column < 9; column++)
-    for(let row = 0; row < 9; row++) {
-      if (matrix[column][row]) continue;
-
-      rem = 1;
-      for (let nb = 1; nb <= 9; nb++) {
-        if(OKRow(matrix, row, nb) && OKCol(matrix, column, nb) && OKMatrix(matrix, column, row, nb)) {
-          matrix[column][row] = nb;
-          if(solveMatrix(matrix)) return true;
-          matrix[column][row] = 0;
-        }
-      }
-      return false;
-    }
-  if(rem === 0) return true;
-  return false;
-};
-
-function isMatrixValid(matrix, copy = true) {
-  let res;
-  if(copy) {
-    const copied = _.cloneDeep(matrix);
-    res = solveMatrix(copied);
-    console.log(copied);
-  }
-  else res = solveMatrix(matrix);
-  return res;
-}
-
-function compareCoordinates(coord1, coord2) {
-  return coord1 !== null && coord2 !== null && coord1.c === coord2.c && coord1.r === coord2.r;
-}
-
-
-//TODO change to enums using Typescript
-const CellType = {
-  FIXED: 'fixed',
-  EDITABLE: 'editable',
-  VALID: 'valid',
-  INVALID: 'invalid'
-}
-
-const Difficulty = {
-  EASY: 5,
-  MEDIUM: 6,
-  HARD: 7
-}
-
-/* END OF UTILS */
-
-
-class Box extends React.Component {
+//
+class Cell extends React.Component<CellProps> {
   class() {
     let classname = 'box ' + this.props.type;
     if(this.props.selected) classname += " selected";
@@ -145,7 +47,15 @@ class Box extends React.Component {
 }
 
 
-class Matrix3 extends React.Component {
+interface MatrixProps {
+  matrixNb: number,
+  matrix: number[][],
+  cellTypes: CellType[][],
+  cellSelected: Coordinate | null
+  selectCell: SelectCell
+}
+
+class Matrix extends React.Component<MatrixProps> {
   getNumberFromMatrice() {
     const tpCol = Math.floor(this.props.matrixNb % 3) * 3, // top left column index of the matrix
         tpRow = Math.floor(this.props.matrixNb / 3) * 3;
@@ -166,14 +76,12 @@ class Matrix3 extends React.Component {
     const { numbers, types, coordinates } = this.getNumberFromMatrice();
     
     return new Array(9).fill(null).map((el, i) => {
-      let box = <Box key={"box"+this.props.matrixNb+"-"+(i+1)}
+      return <Cell key={"box"+this.props.matrixNb+"-"+(i+1)}
                     type={types[i]}
                     number={numbers[i]}
                     coordinates={coordinates[i]}
                     selected={compareCoordinates(this.props.cellSelected, coordinates[i])}
-                    setNumber={this.props.setNumber}
                     selectCell={this.props.selectCell}/>
-      return box;
     });
   }
 
@@ -188,8 +96,14 @@ class Matrix3 extends React.Component {
 
 
 
-class Sudoku extends React.Component {
-  constructor(props) {
+interface SudokuState {
+  sudokuMatrix: number[][],
+  cellTypes: CellType[][],
+  cellSelected: Coordinate | null
+}
+
+class Sudoku extends React.Component<any, SudokuState> {
+  constructor(props: any) {
     super(props);
 
     this.state = {
@@ -229,7 +143,7 @@ class Sudoku extends React.Component {
   }
 
   // select the cell at the given coordinates
-  selectCell(coordinates) {
+  selectCell(coordinates: Coordinate) {
     // console.log("selected (" + coordinates.c + ", " + coordinates.r + ")");
     if(coordinates.c < 0 || 8 < coordinates.c || coordinates.r < 0 || 8 < coordinates.r) {
       // no need to re-render if no cell was selected
@@ -241,10 +155,10 @@ class Sudoku extends React.Component {
   }
 
   // set a new number at the given cell
-  setNumber(coordinates, nb) {
+  setNumber(coordinates: Coordinate, nb: number): void {
     // console.log(coordinates.c, coordinates.r, nb);
-    const matrix = _.cloneDeep(this.state.sudokuMatrix);
-    let types = _.cloneDeep(this.state.cellTypes);
+    const matrix: number[][] = _.cloneDeep(this.state.sudokuMatrix);
+    let types: CellType[][] = _.cloneDeep<CellType[][]>(this.state.cellTypes);
 
     // reset cell in case a number is already present
     matrix[coordinates.c][coordinates.r] = 0;
@@ -257,23 +171,20 @@ class Sudoku extends React.Component {
     }
     types[coordinates.c][coordinates.r] = valid ? CellType.VALID : CellType.INVALID;
 
-    // const i = invalids.indexOf(coordinates);
-    // if(valid && i !== -1) invalids = invalids.slice(i);
-    // else if(!valid && i !== -1) invalids.push(coordinates);
-    
-    // this.setState({ edit: gameMatrix, invalidCoordinates: invalids });
     this.setState({ sudokuMatrix: matrix, cellTypes: types });
   }
 
-  keyDown(e) {
+  keyDown(e: any) {
     const numbers = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
-    const charCode = e.keyCode || e.which;
-    let character = String.fromCharCode(charCode);
+    let key = e.key;// | e.code;
+    // let character = String.fromCharCode(charCode);
     if(this.state.cellSelected) {
       // erase number in case of delete of backspace press
-      if(charCode === 46 || charCode === 8) character = '0';
+      // if(charCode === 46 || charCode === 8) character = '0';
+      if(-1 < ['Backspace', 'Delete'].indexOf(key)) key = '0';
       // input new number in the cell
-      if (-1 < numbers.indexOf(character)) this.setNumber(this.state.cellSelected, +character);
+      console.log(key);
+      if (-1 < numbers.indexOf(key)) this.setNumber(this.state.cellSelected, +key);
       this.setState({ cellSelected: null });
     }
   }
@@ -281,12 +192,11 @@ class Sudoku extends React.Component {
   // create a matrix of 9 cells
   makeMatrice() {
     return new Array(9).fill(null).map((el, i) => {
-      return <Matrix3 key={"matrix"+(i+1)}
+      return <Matrix key={"matrix"+(i+1)}
                       matrixNb={i}
                       matrix={this.state.sudokuMatrix}
                       cellTypes={this.state.cellTypes}
                       cellSelected={this.state.cellSelected}
-                      setNumber={this.setNumber}
                       selectCell={this.selectCell}/>
     });
   }
@@ -297,7 +207,7 @@ class Sudoku extends React.Component {
 
   render() {
     return (
-        <div className="sudoku" tabIndex="0"
+        <div className="sudoku" tabIndex={0}
           onKeyDown={this.keyDown}
           onBlur={() => this.selectCell({c: -1, r: -1})}>
           {this.makeMatrice()}
@@ -307,7 +217,7 @@ class Sudoku extends React.Component {
 }
 
 
-function formatTime(time) {
+function formatTime(time: number) {
   const [ hour, minutes, seconds ] = [ Math.floor(time/3600), Math.floor(time/60), time%60 ];
   const text = [ hour < 10 ? "0"+hour : ""+hour,
                 minutes < 10 ? "0"+minutes : ""+minutes,
@@ -316,7 +226,7 @@ function formatTime(time) {
 }
 
 // simple timer to count time since start of the game
-const Timer = (props) => {
+const Timer = () => {
   const [ time, setTime ] = useState(0);
 
   useEffect(() => {
@@ -332,8 +242,12 @@ const Timer = (props) => {
   );
 }
 
-class Game extends React.Component {
-  constructor(props) {
+
+interface GameState { difficulty: Difficulty }
+
+// react component that encapsulates the rest
+class Game extends React.Component<any, GameState> {
+  constructor(props: any) {
     super(props);
 
     this.state = {
@@ -346,6 +260,11 @@ class Game extends React.Component {
         <div>
           <Timer />
           <Sudoku difficulty={this.state.difficulty}/>
+          <div id="instructions">
+            <h2>How to play?</h2>
+            <p>Click on a cell to select it (it will be highlighted in blue), and press a number on your keyboard to input it.
+            If the number is at the right position it will appear in blue, otherwise in red.</p>
+          </div>
         </div>
     )
   }
@@ -353,8 +272,8 @@ class Game extends React.Component {
   render() {
     return (
         <div className="center-container">
-          <div hidden={this.state.difficulty}>
-            <h2>Choose your difficulty</h2>
+          <div hidden={+this.state.difficulty > 0}>
+            <h2 className="centered">Choose your difficulty</h2>
             <div className="button-list">
               <button onClick={() => this.setState({difficulty: Difficulty.EASY})}>Easy</button>
               <button onClick={() => this.setState({difficulty: Difficulty.MEDIUM})}>Medium</button>

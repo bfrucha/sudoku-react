@@ -5,6 +5,10 @@ html {
   line-height: 22px;
 }
 
+.centered {
+  text-align: center;
+}
+
 .center-container {
   width: 500px;
   margin: 40px auto;
